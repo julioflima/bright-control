@@ -3,6 +3,28 @@
 #   curl -fsSL https://raw.githubusercontent.com/julioflima/bright-control/main/install.sh | bash
 set -euo pipefail
 REPO="julioflima/bright-control"
+
+# ---------- Linux ----------
+if [ "$(uname -s)" = "Linux" ]; then
+  case "$(uname -m)" in
+    x86_64|amd64) ARCH=amd64 ;;
+    aarch64|arm64) ARCH=arm64 ;;
+    *) echo "Arquitetura não suportada: $(uname -m)"; exit 1 ;;
+  esac
+  BIN="$HOME/.local/bin/brightcontrol"
+  echo "🔋 Instalando BrightControl em $BIN…"
+  mkdir -p "$(dirname "$BIN")"
+  pkill -x brightcontrol 2>/dev/null || true
+  curl -fsSL "https://github.com/$REPO/releases/latest/download/brightcontrol-linux-$ARCH" -o "$BIN.tmp"
+  chmod +x "$BIN.tmp" && mv "$BIN.tmp" "$BIN"
+  # The app registers itself in ~/.config/autostart on first run.
+  (setsid "$BIN" >/dev/null 2>&1 &) || (nohup "$BIN" >/dev/null 2>&1 &)
+  echo "✅ Pronto! Procure o ícone 🌙 na bandeja do sistema."
+  echo "   GNOME: precisa da extensão AppIndicator para mostrar ícones na bandeja."
+  exit 0
+fi
+
+# ---------- macOS ----------
 LABEL="com.julioflima.brightcontrol"
 AGENT="$HOME/Library/LaunchAgents/$LABEL.plist"
 
