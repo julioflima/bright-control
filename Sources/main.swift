@@ -45,10 +45,12 @@ enum Keys {
     static let enabled = "enabled"
     static let threshold = "threshold"
     static let showLowIcon = "showLowIcon"
-    static let lowIconThreshold = "lowIconThreshold"
 }
 
 let defaults = UserDefaults.standard
+
+/// The low-battery icon appears at this level or below (on battery).
+let lowIconThreshold = 20
 
 /// Set by `--preview-low N`: pretend the Mac is on battery at N % (screenshots/demo; never sleeps the display).
 var previewPercent: Int?
@@ -62,10 +64,8 @@ enum LoginItem {
             .appendingPathComponent("Library/LaunchAgents/\(label).plist")
     }
 
-    static var isEnabled: Bool { FileManager.default.fileExists(atPath: plistURL.path) }
-
-    static func setEnabled(_ on: Bool) {
-        if on {
+    static func install() {
+        if true {
             let exe = Bundle.main.executablePath ?? CommandLine.arguments[0]
             let plist: [String: Any] = [
                 "Label": label,
@@ -77,9 +77,9 @@ enum LoginItem {
             ]
             try? FileManager.default.createDirectory(at: plistURL.deletingLastPathComponent(),
                                                      withIntermediateDirectories: true)
-            (plist as NSDictionary).write(to: plistURL, atomically: true)
-        } else {
-            try? FileManager.default.removeItem(at: plistURL)
+            if NSDictionary(contentsOf: plistURL) != plist as NSDictionary {
+                (plist as NSDictionary).write(to: plistURL, atomically: true)
+            }
         }
     }
 }
@@ -117,6 +117,15 @@ func batteryImage(percent: Int, low: Bool) -> NSImage {
     return img
 }
 
+/// Transparent view that eats mouse clicks (the low-battery icon is display-only).
+final class ClickShield: NSView {
+    override func mouseDown(with event: NSEvent) {}
+    override func mouseUp(with event: NSEvent) {}
+    override func rightMouseDown(with event: NSEvent) {}
+    override func otherMouseDown(with event: NSEvent) {}
+    override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
+}
+
 // MARK: - App
 
 /// New status items are added on the far left and, on MacBooks with a notch and a busy
@@ -143,13 +152,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             Keys.enabled: true,
             Keys.threshold: 5,
             Keys.showLowIcon: true,
-            Keys.lowIconThreshold: 20,
         ])
 
         let menu = NSMenu()
         menu.delegate = self
         controlItem.menu = menu
         controlItem.button?.toolTip = "BrightControl"
+
+        // Starting at login is mandatory: make sure the LaunchAgent exists on every
+        // launch (only for an installed copy, never for a dev build).
+        let path = Bundle.main.bundlePath
+        if path.hasPrefix("/Applications/") || path.hasPrefix(NSHomeDirectory() + "/Applications/") {
+            LoginItem.install()
+        }
 
         tick()
         timer = Timer.scheduledTimer(withTimeInterval: 5, repeats: true) { [weak self] _ in self?.tick() }
@@ -191,14 +206,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         controlItem.button?.appearsDisabled = !isActive
 
         // Low battery icon
-        let lowLimit = defaults.integer(forKey: Keys.lowIconThreshold)
         let showLow = defaults.bool(forKey: Keys.showLowIcon) && state.hasBattery
-            && !state.onAC && state.percent <= lowLimit
+            && !state.onAC && state.percent <= lowIconThreshold
         if showLow {
             if batteryItem == nil {
                 batteryItem = makeStatusItem("BrightControlBattery", length: NSStatusItem.variableLength, position: 330)
                 batteryItem?.button?.imagePosition = .imageRight
                 batteryItem?.button?.font = NSFont.menuBarFont(ofSize: 0)
+                if let button = batteryItem?.button {
+                    // Indicator only: swallow clicks so the item is never highlighted/selected.
+                    let shield = ClickShield(frame: button.bounds)
+                    shield.autoresizingMask = [.width, .height]
+                    button.addSubview(shield)
+                }
             }
             batteryItem?.button?.title = "\(state.percent)%"
             batteryItem?.button?.image = batteryImage(percent: state.percent, low: true)
@@ -259,26 +279,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
         menu.addItem(.separator())
 
-        let lowLimit = defaults.integer(forKey: Keys.lowIconThreshold)
         let showLow = item("Ícone de bateria baixa na barra", #selector(toggleLowIcon))
         showLow.state = defaults.bool(forKey: Keys.showLowIcon) ? .on : .off
         menu.addItem(showLow)
 
-        let lowMenu = NSMenu()
-        for v in [10, 15, 20, 30] {
-            let i = item("\(v)%", #selector(setLowIconThreshold(_:)))
-            i.tag = v
-            i.state = v == lowLimit ? .on : .off
-            lowMenu.addItem(i)
-        }
-        let low = NSMenuItem(title: "Mostrar a partir de \(lowLimit)%", action: nil, keyEquivalent: "")
-        low.submenu = lowMenu
-        menu.addItem(low)
-
         menu.addItem(.separator())
-        let login = item("Abrir ao iniciar sessão", #selector(toggleLogin))
-        login.state = LoginItem.isEnabled ? .on : .off
-        menu.addItem(login)
         menu.addItem(item("Sair do BrightControl", #selector(quit), key: "q"))
     }
 
@@ -297,8 +302,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     @objc func pause(_ s: NSMenuItem) { pausedUntil = Date().addingTimeInterval(Double(s.tag) * 60); refreshIcons() }
     @objc func resume() { pausedUntil = nil; tick() }
     @objc func toggleLowIcon() { defaults.set(!defaults.bool(forKey: Keys.showLowIcon), forKey: Keys.showLowIcon); refreshIcons() }
-    @objc func setLowIconThreshold(_ s: NSMenuItem) { defaults.set(s.tag, forKey: Keys.lowIconThreshold); refreshIcons() }
-    @objc func toggleLogin() { LoginItem.setEnabled(!LoginItem.isEnabled) }
     @objc func quit() { NSApp.terminate(nil) }
 }
 
