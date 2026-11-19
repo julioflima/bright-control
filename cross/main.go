@@ -23,9 +23,8 @@ const lowIconThreshold = 20 // low-battery icon shows at this level or below (on
 // ---------- settings ----------
 
 type Config struct {
-	Enabled     bool `json:"enabled"`
-	Threshold   int  `json:"threshold"`
-	ShowLowIcon bool `json:"showLowIcon"`
+	Enabled   bool `json:"enabled"`
+	Threshold int  `json:"threshold"`
 }
 
 func configPath() string {
@@ -37,7 +36,7 @@ func configPath() string {
 }
 
 func loadConfig() Config {
-	c := Config{Enabled: true, Threshold: 5, ShowLowIcon: true}
+	c := Config{Enabled: true, Threshold: 5}
 	if b, err := os.ReadFile(configPath()); err == nil {
 		_ = json.Unmarshal(b, &c)
 	}
@@ -60,8 +59,8 @@ type App struct {
 	lastSleep   time.Time
 	indicator   *exec.Cmd
 
-	mStatus, mEnabled, mThreshold, mPause, mResume, mLowIcon *systray.MenuItem
-	thresholdItems                                           map[int]*systray.MenuItem
+	mStatus, mEnabled, mThreshold, mPause, mResume *systray.MenuItem
+	thresholdItems                                 map[int]*systray.MenuItem
 }
 
 func (a *App) paused() bool { return time.Now().Before(a.pausedUntil) }
@@ -110,8 +109,6 @@ func (a *App) onReady() {
 	a.mResume.Hide()
 
 	systray.AddSeparator()
-	a.mLowIcon = systray.AddMenuItemCheckbox("Ícone de bateria baixa na barra", "", a.cfg.ShowLowIcon)
-	systray.AddSeparator()
 	mQuit := systray.AddMenuItem("Sair do BrightControl", "")
 
 	go func() {
@@ -127,12 +124,6 @@ func (a *App) onReady() {
 			case <-a.mResume.ClickedCh:
 				a.mu.Lock()
 				a.pausedUntil = time.Time{}
-				a.mu.Unlock()
-				a.refresh()
-			case <-a.mLowIcon.ClickedCh:
-				a.mu.Lock()
-				a.cfg.ShowLowIcon = !a.cfg.ShowLowIcon
-				a.cfg.save()
 				a.mu.Unlock()
 				a.refresh()
 			case <-mQuit.ClickedCh:
@@ -208,15 +199,10 @@ func (a *App) refresh() {
 			a.mPause.Disable()
 		}
 	}
-	if a.cfg.ShowLowIcon {
-		a.mLowIcon.Check()
-	} else {
-		a.mLowIcon.Uncheck()
-	}
 
 	setTrayIcon(moonIcon(a.active()))
 
-	showLow := a.cfg.ShowLowIcon && st.HasBattery && !st.OnAC && st.Percent <= lowIconThreshold
+	showLow := st.HasBattery && !st.OnAC && st.Percent <= lowIconThreshold
 	if showLow {
 		a.startIndicator()
 	} else {

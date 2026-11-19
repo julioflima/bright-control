@@ -2,7 +2,7 @@
 
 App para **macOS, Windows e Linux** que **apaga a tela quando a bateria está quase no fim** (e o carregador não está conectado), para o Mac durar mais alguns minutos — com um ícone lá em cima para ligar/desligar na hora, sem abrir Ajustes do Sistema.
 
-Quando a bateria fica baixa (20% ou menos), ele também mostra **um ícone de bateria igual ao nativo do Mac**, em vermelho, com a porcentagem. Esse ícone é só indicador: clicar nele não faz nada.
+Quando a bateria fica baixa (20% ou menos), ele também mostra **um ícone de bateria igual ao nativo do Mac**, em vermelho, com a porcentagem. Esse ícone é só indicador: clicar nele não faz nada, e ele está sempre ativo.
 
 ![Barra de menus](docs/menubar.png)
 
@@ -55,7 +55,6 @@ Instala em `~/.local/bin/brightcontrol`. Precisa de uma bandeja compatível (KDE
 | **Apagar tela com bateria baixa** | Liga/desliga o comportamento (🌙 cheia = ligado, 🌙 vazada = desligado) |
 | **Apagar quando chegar a…** | Limite: 2, 3, 5 (padrão), 10, 15 ou 20 % |
 | **Pausar por…** | Desliga por 15 min, 30 min, 1 h ou 2 h e volta sozinho |
-| **Ícone de bateria baixa na barra** | Mostra/esconde o ícone vermelho de bateria (aparece com 20% ou menos) |
 
 Com a tela apagada, basta mexer no mouse/teclado: o app espera 20 s antes de apagar de novo, tempo de sobra para clicar na 🌙 e desligar ou pausar.
 

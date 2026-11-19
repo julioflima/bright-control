@@ -44,7 +44,6 @@ struct BatteryState {
 enum Keys {
     static let enabled = "enabled"
     static let threshold = "threshold"
-    static let showLowIcon = "showLowIcon"
 }
 
 let defaults = UserDefaults.standard
@@ -151,7 +150,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         defaults.register(defaults: [
             Keys.enabled: true,
             Keys.threshold: 5,
-            Keys.showLowIcon: true,
         ])
 
         let menu = NSMenu()
@@ -206,7 +204,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         controlItem.button?.appearsDisabled = !isActive
 
         // Low battery icon
-        let showLow = defaults.bool(forKey: Keys.showLowIcon) && state.hasBattery
+        let showLow = state.hasBattery
             && !state.onAC && state.percent <= lowIconThreshold
         if showLow {
             if batteryItem == nil {
@@ -277,11 +275,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             menu.addItem(p)
         }
 
-        menu.addItem(.separator())
-
-        let showLow = item("Ícone de bateria baixa na barra", #selector(toggleLowIcon))
-        showLow.state = defaults.bool(forKey: Keys.showLowIcon) ? .on : .off
-        menu.addItem(showLow)
 
         menu.addItem(.separator())
         menu.addItem(item("Sair do BrightControl", #selector(quit), key: "q"))
@@ -301,7 +294,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     @objc func setThreshold(_ s: NSMenuItem) { defaults.set(s.tag, forKey: Keys.threshold); tick() }
     @objc func pause(_ s: NSMenuItem) { pausedUntil = Date().addingTimeInterval(Double(s.tag) * 60); refreshIcons() }
     @objc func resume() { pausedUntil = nil; tick() }
-    @objc func toggleLowIcon() { defaults.set(!defaults.bool(forKey: Keys.showLowIcon), forKey: Keys.showLowIcon); refreshIcons() }
     @objc func quit() { NSApp.terminate(nil) }
 }
 
