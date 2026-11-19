@@ -42,7 +42,6 @@ struct BatteryState {
 // MARK: - Settings
 
 enum Keys {
-    static let enabled = "enabled"
     static let threshold = "threshold"
 }
 
@@ -70,8 +69,8 @@ enum LoginItem {
                 "Label": label,
                 "ProgramArguments": [exe],
                 "RunAtLoad": true,
-                // Restart only if it crashes; "Quit" from the menu stays quit.
-                "KeepAlive": ["SuccessfulExit": false],
+                // There is no Quit: if the app is closed in any way, launchd reopens it.
+                "KeepAlive": true,
                 "ProcessType": "Interactive",
             ]
             try? FileManager.default.createDirectory(at: plistURL.deletingLastPathComponent(),
@@ -148,7 +147,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
     func applicationDidFinishLaunching(_ note: Notification) {
         defaults.register(defaults: [
-            Keys.enabled: true,
             Keys.threshold: 5,
         ])
 
@@ -175,7 +173,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     }
 
     var isPaused: Bool { (pausedUntil.map { $0 > Date() }) ?? false }
-    var isActive: Bool { defaults.bool(forKey: Keys.enabled) && !isPaused }
+    var isActive: Bool { !isPaused } // always on; can only be paused
 
     // Runs every 5 s.
     func tick() {
@@ -244,9 +242,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         menu.addItem(.separator())
 
         let threshold = defaults.integer(forKey: Keys.threshold)
-        let enabled = item("Apagar tela com bateria baixa", #selector(toggleEnabled))
-        enabled.state = defaults.bool(forKey: Keys.enabled) ? .on : .off
-        menu.addItem(enabled)
 
         let thMenu = NSMenu()
         for v in [2, 3, 5, 10, 15, 20] {
@@ -271,13 +266,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             }
             let p = NSMenuItem(title: "Pausar por…", action: nil, keyEquivalent: "")
             p.submenu = pMenu
-            p.isEnabled = defaults.bool(forKey: Keys.enabled)
             menu.addItem(p)
         }
-
-
-        menu.addItem(.separator())
-        menu.addItem(item("Sair do BrightControl", #selector(quit), key: "q"))
     }
 
     func item(_ title: String, _ action: Selector, key: String = "") -> NSMenuItem {
@@ -286,15 +276,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         return i
     }
 
-    @objc func toggleEnabled() {
-        defaults.set(!defaults.bool(forKey: Keys.enabled), forKey: Keys.enabled)
-        pausedUntil = nil
-        refreshIcons()
-    }
     @objc func setThreshold(_ s: NSMenuItem) { defaults.set(s.tag, forKey: Keys.threshold); tick() }
     @objc func pause(_ s: NSMenuItem) { pausedUntil = Date().addingTimeInterval(Double(s.tag) * 60); refreshIcons() }
     @objc func resume() { pausedUntil = nil; tick() }
-    @objc func quit() { NSApp.terminate(nil) }
 }
 
 // Debug helper: `BrightControl --preview-low 8` forces the low-battery icon (for screenshots).

@@ -23,8 +23,7 @@ const lowIconThreshold = 20 // low-battery icon shows at this level or below (on
 // ---------- settings ----------
 
 type Config struct {
-	Enabled   bool `json:"enabled"`
-	Threshold int  `json:"threshold"`
+	Threshold int `json:"threshold"`
 }
 
 func configPath() string {
@@ -36,7 +35,7 @@ func configPath() string {
 }
 
 func loadConfig() Config {
-	c := Config{Enabled: true, Threshold: 5}
+	c := Config{Threshold: 5}
 	if b, err := os.ReadFile(configPath()); err == nil {
 		_ = json.Unmarshal(b, &c)
 	}
@@ -59,12 +58,12 @@ type App struct {
 	lastSleep   time.Time
 	indicator   *exec.Cmd
 
-	mStatus, mEnabled, mThreshold, mPause, mResume *systray.MenuItem
-	thresholdItems                                 map[int]*systray.MenuItem
+	mStatus, mThreshold, mPause, mResume *systray.MenuItem
+	thresholdItems                       map[int]*systray.MenuItem
 }
 
 func (a *App) paused() bool { return time.Now().Before(a.pausedUntil) }
-func (a *App) active() bool { return a.cfg.Enabled && !a.paused() }
+func (a *App) active() bool { return !a.paused() } // always on; can only be paused
 
 func (a *App) onReady() {
 	systray.SetTooltip("BrightControl")
@@ -73,7 +72,6 @@ func (a *App) onReady() {
 	a.mStatus.Disable()
 	systray.AddSeparator()
 
-	a.mEnabled = systray.AddMenuItemCheckbox("Apagar tela com bateria baixa", "", a.cfg.Enabled)
 	a.mThreshold = systray.AddMenuItem("", "")
 	a.thresholdItems = map[int]*systray.MenuItem{}
 	for _, v := range []int{2, 3, 5, 10, 15, 20} {
@@ -108,28 +106,13 @@ func (a *App) onReady() {
 	a.mResume = systray.AddMenuItem("Retomar agora", "")
 	a.mResume.Hide()
 
-	systray.AddSeparator()
-	mQuit := systray.AddMenuItem("Sair do BrightControl", "")
-
+	// No Quit item: the app always runs (only the uninstaller stops it).
 	go func() {
-		for {
-			select {
-			case <-a.mEnabled.ClickedCh:
-				a.mu.Lock()
-				a.cfg.Enabled = !a.cfg.Enabled
-				a.pausedUntil = time.Time{}
-				a.cfg.save()
-				a.mu.Unlock()
-				a.refresh()
-			case <-a.mResume.ClickedCh:
-				a.mu.Lock()
-				a.pausedUntil = time.Time{}
-				a.mu.Unlock()
-				a.refresh()
-			case <-mQuit.ClickedCh:
-				systray.Quit()
-				return
-			}
+		for range a.mResume.ClickedCh {
+			a.mu.Lock()
+			a.pausedUntil = time.Time{}
+			a.mu.Unlock()
+			a.refresh()
 		}
 	}()
 
@@ -173,11 +156,6 @@ func (a *App) refresh() {
 		a.mStatus.SetTitle(fmt.Sprintf("Bateria: %d%%", st.Percent))
 	}
 
-	if a.cfg.Enabled {
-		a.mEnabled.Check()
-	} else {
-		a.mEnabled.Uncheck()
-	}
 	a.mThreshold.SetTitle(fmt.Sprintf("Apagar quando chegar a %d%%", a.cfg.Threshold))
 	for v, it := range a.thresholdItems {
 		if v == a.cfg.Threshold {
@@ -193,11 +171,6 @@ func (a *App) refresh() {
 	} else {
 		a.mResume.Hide()
 		a.mPause.Show()
-		if a.cfg.Enabled {
-			a.mPause.Enable()
-		} else {
-			a.mPause.Disable()
-		}
 	}
 
 	setTrayIcon(moonIcon(a.active()))

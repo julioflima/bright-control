@@ -44,7 +44,7 @@ curl -fsSL https://raw.githubusercontent.com/julioflima/bright-control/main/inst
 
 Instala em `~/.local/bin/brightcontrol`. Precisa de uma bandeja compatível (KDE, XFCE, Cinnamon, MATE; no GNOME, a extensão *AppIndicator*). Para apagar a tela usa o que existir: `xset` (X11), `kscreen-doctor` (KDE Wayland), GNOME Wayland via D-Bus ou `wlopm`.
 
-> O app sempre abre ao iniciar a sessão, nos três sistemas.
+> O app sempre abre ao iniciar a sessão e não tem opção de sair nem de desligar, nos três sistemas — no máximo pausar. Para tirá-lo, só desinstalando. No Mac, se for encerrado, ele reabre sozinho.
 
 > **MacBook com notch e barra cheia?** Ícones novos entram pela esquerda e podem ficar escondidos atrás do notch. O BrightControl já se posiciona perto do relógio; para mudar de lugar, segure **⌘** e arraste o ícone.
 
@@ -52,11 +52,10 @@ Instala em `~/.local/bin/brightcontrol`. Precisa de uma bandeja compatível (KDE
 
 | Opção | O que faz |
 |---|---|
-| **Apagar tela com bateria baixa** | Liga/desliga o comportamento (🌙 cheia = ligado, 🌙 vazada = desligado) |
 | **Apagar quando chegar a…** | Limite: 2, 3, 5 (padrão), 10, 15 ou 20 % |
-| **Pausar por…** | Desliga por 15 min, 30 min, 1 h ou 2 h e volta sozinho |
+| **Pausar por…** | Pausa por 15 min, 30 min, 1 h ou 2 h e volta sozinho (🌙 cheia = ativo, 🌙 vazada = pausado) |
 
-Com a tela apagada, basta mexer no mouse/teclado: o app espera 20 s antes de apagar de novo, tempo de sobra para clicar na 🌙 e desligar ou pausar.
+Com a tela apagada, basta mexer no mouse/teclado: o app espera 20 s antes de apagar de novo, tempo de sobra para clicar na 🌙 e pausar.
 
 ## Desinstalar
 

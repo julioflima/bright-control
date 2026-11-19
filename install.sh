@@ -65,7 +65,7 @@ cat > "$AGENT" <<PLIST
   <key>Label</key><string>$LABEL</string>
   <key>ProgramArguments</key><array><string>$APP/Contents/MacOS/BrightControl</string></array>
   <key>RunAtLoad</key><true/>
-  <key>KeepAlive</key><dict><key>SuccessfulExit</key><false/></dict>
+  <key>KeepAlive</key><true/>
   <key>ProcessType</key><string>Interactive</string>
 </dict>
 </plist>
